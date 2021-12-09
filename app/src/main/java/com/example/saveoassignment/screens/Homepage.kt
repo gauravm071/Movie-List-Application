@@ -21,6 +21,7 @@ import com.example.saveoassignment.adapter.PopularMovieListAdapter
 import com.example.saveoassignment.adapter.RegularMovieListAdapter
 import com.example.saveoassignment.databinding.FragmentHomepageBinding
 import com.example.saveoassignment.model.MovieListResult
+import com.example.saveoassignment.model.Result
 import com.example.saveoassignment.repository.MovieListRepository
 import com.example.saveoassignment.retrofit.RetrofitInstance
 import com.example.saveoassignment.services.MoviesRetriever
@@ -68,7 +69,8 @@ class Homepage : Fragment() {
             if (pageNo > 1) {
                 pageNo -= 1
                 if (pageNo == 1) {
-                    binding.prevTextView.isVisible = false  // handeling visibility of prev button according to the situation
+                    binding.prevTextView.isVisible =
+                        false  // handeling visibility of prev button according to the situation
                 }
                 fetchMovies()
                 observeMoviesList()
@@ -84,26 +86,30 @@ class Homepage : Fragment() {
     }
 
     private fun fetchMovies() {
-        binding.loader.isVisible=true
+        binding.loader.isVisible = true
         viewModel.getListOfMovies(API_KEY, DEFAULT_LANGUAGE, pageNo)
         viewModel.getListOfPopularMovies(API_KEY, DEFAULT_LANGUAGE, pageNo)
     }
 
     private fun observeMoviesList() {
         viewModel.regularMovieList.observe(viewLifecycleOwner, { MovieList ->
-            binding.loader.isVisible=false
+            binding.loader.isVisible = false
             setRegularListAdapter(MovieList)
         })
 
         viewModel.popularMovieList.observe(viewLifecycleOwner, { MovieList ->
-            binding.loader.isVisible=false
+            binding.loader.isVisible = false
             setPopularListAdapter(MovieList)
         })
     }
 
     private fun setPopularListAdapter(movies: MovieListResult?) {
         popularMovieListAdapter =
-            movies?.results?.let { movieResult -> PopularMovieListAdapter(movieResult) }!!
+            movies?.results?.let { movieResult ->
+                PopularMovieListAdapter(movieResult) { position ->
+                    navigateToDetailScreen(movieResult[position])
+                }
+            }!!
         binding.popularMoviesRecyclerView.layoutManager =
             CenterZoomLayoutManager(requireContext(), LinearLayout.HORIZONTAL, false)
 
@@ -118,10 +124,7 @@ class Homepage : Fragment() {
     private fun setRegularListAdapter(movies: MovieListResult?) {
         regularMovieListAdapter = movies?.results?.let { movieResult ->
             RegularMovieListAdapter(movieResult) { position ->
-                val gson = Gson()
-                val json = gson.toJson(movieResult[position])
-                val bundle = bundleOf("movie" to json)
-                findNavController().navigate(R.id.action_homepage_to_movieDetails, bundle)
+                navigateToDetailScreen(movieResult[position])
             }
         }!!
         binding.regularMovieListRecyclerView.layoutManager =
@@ -142,5 +145,11 @@ class Homepage : Fragment() {
                 R.drawable.ic_baseline_search_24
             )
         )
+    }
+
+    private fun navigateToDetailScreen(movieResult: Result) {
+        val gson = Gson()
+        val bundle = bundleOf("movie" to gson.toJson(movieResult))
+        findNavController().navigate(R.id.action_homepage_to_movieDetails, bundle)
     }
 }
